@@ -1,0 +1,76 @@
+<html>
+<body>
+provider "aws" {
+region = "ap-south-1"
+profile = "srishti_jain"
+}
+resource "aws_key_pair" "taskkey" {
+key_name = "taskkey"
+public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC2ThbwkFgnI/aAzOVSBsY2TjaLRUnGnyzylxG+tp46vxJInDcFn83TRjY5WojaA4A8eHjJFtpJdNYQw8Z8wMznjDSnefZZOqVYVAhl61j4C0YVhlCY+74rJCu7ms8Jhn7heMIwUUxWHdSr4eL+JoUg7E4+XUH4olvDtghLn/ddBabGIk3dQYlsOME4Ri1xFkaggKvMBOXw/2NMBqgsTG65duUG5kzYMf/zL69ZAxUxtgpVhlsoiqOAV9Vh70CQq8nZDRJ59EaQ1knBwxOFbcRczRvyCWna6MFdaVrIAfqJC/H2la3qcLKqMbYRrZAjHLubuAcC4kqUg6aldiQrVVyP
+"
+}
+resource "aws_security_group" "tasksg" {
+name = "tasksg"
+description = "Allow TLS inbound traffic"
+vpc_id = "vpc-33465a5b"
+
+ingress {
+description = "SSH"
+from_port = 22
+to_port = 22
+protocol = "tcp"
+cidr_blocks = [ "0.0.0.0/0" ]
+}
+ingress {
+description = "HTTP"
+from_port = 80
+to_port = 80
+protocol = "tcp"
+cidr_blocks = [ "0.0.0.0/0" ]
+}
+egress {
+from_port = 0
+to_port = 0
+protocol = "-1"
+cidr_blocks = ["0.0.0.0/0"]
+}
+tags = {
+Name = "tasksg"
+}
+}
+resource "aws_ebs_volume" "taskebs" {
+availability_zone = "ap-south-1a"
+size = 1
+tags = {
+Name = "taskebs"
+}
+}
+resource "aws_volume_attachment" "taskattach" {
+device_name = "/dev/sdf"
+volume_id = "${aws_ebs_volume.taskebs.id}"
+instance_id = "${aws_instance.taskinst.id}"
+}
+resource "aws_instance" "taskinst" {
+ami = "ami-0447a12f28fddb066"
+instance_type = "t2.micro"
+availability_zone = "ap-south-1a"
+key_name = "taskkey"
+security_groups = [ "tasksg" ]
+user_data = <<-EOF
+
+   	#! /bin/bash
+	sudo yum install httpd -y
+	sudo systemctl start httpd
+	sudo systemctl enable httpd
+	sudo yum install git -y
+	mkfs.ext4 /dev/xvdf1	
+	mount /dev/xvdf1 /var/www/html
+	cd /var/www/html
+	git clone https://github.com/srish072/task1
+EOF
+tags = {
+Name = "taskinst"
+}
+}
+</body>
+</html>
